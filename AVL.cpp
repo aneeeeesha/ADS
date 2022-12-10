@@ -1,148 +1,272 @@
-
-#include <bits/stdc++.h>
+// C++ program to delete a node from AVL Tree
+#include<bits/stdc++.h>
 using namespace std;
+
 
 class Node
 {
-public:
+	public:
 	int key;
-
-	Node **forward;
-	Node(int, int);
+	Node *left;
+	Node *right;
+	int height;
 };
 
-Node::Node(int key, int level)
+
+int max(int a, int b);
+
+
+int height(Node *N)
 {
-	this->key = key;
+	if (N == NULL)
+		return 0;
+	return N->height;
+}
 
-	forward = new Node*[level+1];
 
-	memset(forward, 0, sizeof(Node*)*(level+1));
-};
-
-// Class for Skip list
-class SkipList
+int max(int a, int b)
 {
-	int MAXLVL;
+	return (a > b)? a : b;
+}
 
-	float P;
-
-	int level;
-
-	// pointer to header node
-	Node *header;
-public:
-	SkipList(int, float);
-	int randomLevel();
-	Node* createNode(int, int);
-	void insertElement(int);
-	void displayList();
-};
-
-SkipList::SkipList(int MAXLVL, float P)
+Node* newNode(int key)
 {
-	this->MAXLVL = MAXLVL;
-	this->P = P;
-	level = 0;
+	Node* node = new Node();
+	node->key = key;
+	node->left = NULL;
+	node->right = NULL;
+	node->height = 1; 
+	return(node);
+}
 
-	header = new Node(-1, MAXLVL);
-};
 
-int SkipList::randomLevel()
+Node *rightRotate(Node *y)
 {
-	float r = (float)rand()/RAND_MAX;
-	int lvl = 0;
-	while (r < P && lvl < MAXLVL)
+	Node *x = y->left;
+	Node *T2 = x->right;
+
+	// Perform rotation
+	x->right = y;
+	y->left = T2;
+
+	y->height = max(height(y->left),
+					height(y->right)) + 1;
+	x->height = max(height(x->left),
+					height(x->right)) + 1;
+
+
+	return x;
+}
+
+
+Node *leftRotate(Node *x)
+{
+	Node *y = x->right;
+	Node *T2 = y->left;
+
+
+	y->left = x;
+	x->right = T2;
+
+
+	x->height = max(height(x->left),
+					height(x->right)) + 1;
+	y->height = max(height(y->left),
+					height(y->right)) + 1;
+
+	return y;
+}
+
+
+int getBalance(Node *N)
+{
+	if (N == NULL)
+		return 0;
+	return height(N->left) -
+		height(N->right);
+}
+
+Node* insert(Node* node, int key)
+{
+
+	if (node == NULL)
+		return(newNode(key));
+
+	if (key < node->key)
+		node->left = insert(node->left, key);
+	else if (key > node->key)
+		node->right = insert(node->right, key);
+	else 
+		return node;
+
+
+	node->height = 1 + max(height(node->left),
+						height(node->right));
+
+	
+	int balance = getBalance(node);
+
+	
+	if (balance > 1 && key < node->left->key)
+		return rightRotate(node);
+
+
+	if (balance < -1 && key > node->right->key)
+		return leftRotate(node);
+
+	if (balance > 1 && key > node->left->key)
 	{
-		lvl++;
-		r = (float)rand()/RAND_MAX;
+		node->left = leftRotate(node->left);
+		return rightRotate(node);
 	}
-	return lvl;
-};
-
-Node* SkipList::createNode(int key, int level)
-{
-	Node *n = new Node(key, level);
-	return n;
-};
-
-void SkipList::insertElement(int key)
-{
-	Node *current = header;
-
-	Node *update[MAXLVL+1];
-	memset(update, 0, sizeof(Node*)*(MAXLVL+1));
 
 
-	for (int i = level; i >= 0; i--)
+	if (balance < -1 && key < node->right->key)
 	{
-		while (current->forward[i] != NULL &&
-			current->forward[i]->key < key)
-			current = current->forward[i];
-		update[i] = current;
+		node->right = rightRotate(node->right);
+		return leftRotate(node);
 	}
 
 
-	current = current->forward[0];
+	return node;
+}
 
 
-	if (current == NULL || current->key != key)
+Node * minValueNode(Node* node)
+{
+	Node* current = node;
+
+	while (current->left != NULL)
+		current = current->left;
+
+	return current;
+}
+
+
+Node* deleteNode(Node* root, int key)
+{
+	
+	
+	if (root == NULL)
+		return root;
+
+	if ( key < root->key )
+		root->left = deleteNode(root->left, key);
+
+
+	else if( key > root->key )
+		root->right = deleteNode(root->right, key);
+
+
+	else
 	{
-		int rlevel = randomLevel();
+	
+		if( (root->left == NULL) ||
+			(root->right == NULL) )
+		{
+			Node *temp = root->left ?
+						root->left :
+						root->right;
+
+			if (temp == NULL)
+			{
+				temp = root;
+				root = NULL;
+			}
+			else 
+			*root = *temp; 
+			free(temp);
+		}
+		else
+		{
+	
+			Node* temp = minValueNode(root->right);
+
+			root->key = temp->key;
 
 		
-		if (rlevel > level)
-		{
-			for (int i=level+1;i<rlevel+1;i++)
-				update[i] = header;
-
-			level = rlevel;
+			root->right = deleteNode(root->right,
+									temp->key);
 		}
-
-		Node* n = createNode(key, rlevel);
-
-		for (int i=0;i<=rlevel;i++)
-		{
-			n->forward[i] = update[i]->forward[i];
-			update[i]->forward[i] = n;
-		}
-		cout << "Successfully Inserted key " << key << "\n";
 	}
-};
 
-void SkipList::displayList()
-{
-	cout<<"\n*****Skip List*****"<<"\n";
-	for (int i=0;i<=level;i++)
+	if (root == NULL)
+	return root;
+
+	root->height = 1 + max(height(root->left),
+						height(root->right));
+
+
+	int balance = getBalance(root);
+
+	if (balance > 1 &&
+		getBalance(root->left) >= 0)
+		return rightRotate(root);
+
+	if (balance > 1 &&
+		getBalance(root->left) < 0)
 	{
-		Node *node = header->forward[i];
-		cout << "Level " << i << ": ";
-		while (node != NULL)
-		{
-			cout << node->key<<" ";
-			node = node->forward[i];
-		}
-		cout << "\n";
+		root->left = leftRotate(root->left);
+		return rightRotate(root);
 	}
-};
+
+	if (balance < -1 &&
+		getBalance(root->right) <= 0)
+		return leftRotate(root);
+
+
+	if (balance < -1 &&
+		getBalance(root->right) > 0)
+	{
+		root->right = rightRotate(root->right);
+		return leftRotate(root);
+	}
+
+	return root;
+}
+
+void preOrder(Node *root)
+{
+	if(root != NULL)
+	{
+		cout << root->key << " ";
+		preOrder(root->left);
+		preOrder(root->right);
+	}
+}
 
 int main()
 {
-	// Seed random number generator
-	srand((unsigned)time(0));
+Node *root = NULL;
 
-	// create SkipList object with MAXLVL and P
-	SkipList lst(3, 0.5);
-
-	lst.insertElement(3);
-	lst.insertElement(6);
-	lst.insertElement(7);
-	lst.insertElement(9);
-	lst.insertElement(12);
-	lst.insertElement(19);
-	lst.insertElement(17);
-	lst.insertElement(26);
-	lst.insertElement(21);
-	lst.insertElement(25);
-	lst.displayList();
+while(1){
+    int choice;
+    cout<<"\n1.Insert\n2.Preorder traversal\n3.Delete\n4.Exit\n";
+    cout<<"Enter the choice:";
+    cin>>choice;
+    switch(choice){
+        case 1:
+        int val;
+        cout<<"Enter the value to insert:";
+        cin>>val;
+        root=insert(root,val);
+        break;
+        case 2:
+        cout << "Preorder traversal of the "
+			"constructed AVL tree is \n";
+	    preOrder(root);
+	    break;
+	    case 3:
+	    int del;
+	    cout<<"Enter the value to delete:";
+	    cin>>del;
+	    root = deleteNode(root, del);
+        cout<<"Sucessfully deleted:";
+        break;
+        case 4:
+        exit(0);
+        break;
+    }
+}
+return 0;
 }
